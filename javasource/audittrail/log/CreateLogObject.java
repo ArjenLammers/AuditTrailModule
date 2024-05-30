@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import system.proxies.User;
+import audittrail.impl.LogrecordWriter;
 import audittrail.proxies.AudittrailSuperClass;
 import audittrail.proxies.Log;
 import audittrail.proxies.LogLine;
@@ -85,7 +86,7 @@ public class CreateLogObject {
 
 		final IContext sudoContext = context.createSudoClone();
 		sudoContext.getSession().setTimeZone(getTimeZone(context));
-		final IMendixObject logObject = Core.instantiate(sudoContext, Log.getType());
+		final IMendixObject logObject = Core.instantiate(LogrecordWriter.getContext(), Log.getType());
 
 		IMendixIdentifier userObjectId = null;
 
@@ -103,17 +104,17 @@ public class CreateLogObject {
 			}
 		}
 
-		logObject.setValue(sudoContext, Log.MemberNames.DateTime.toString(), new Date());
-		logObject.setValue(sudoContext, Log.MemberNames.LogObject.toString(), auditableObject.getType());
-		logObject.setValue(sudoContext, Log.MemberNames.Log_User.toString(), userObjectId);
-		logObject.setValue(sudoContext, Log.MemberNames.LogType.toString(), logType.toString());
-		logObject.setValue(sudoContext, Log.MemberNames.ReferenceId.toString(),
+		logObject.setValue(LogrecordWriter.getContext(), Log.MemberNames.DateTime.toString(), new Date());
+		logObject.setValue(LogrecordWriter.getContext(), Log.MemberNames.LogObject.toString(), auditableObject.getType());
+		logObject.setValue(LogrecordWriter.getContext(), Log.MemberNames.Log_User.toString(), userObjectId);
+		logObject.setValue(LogrecordWriter.getContext(), Log.MemberNames.LogType.toString(), logType.toString());
+		logObject.setValue(LogrecordWriter.getContext(), Log.MemberNames.ReferenceId.toString(),
 				String.valueOf(auditableObject.getId().toLong()));
 		String association = null;
 
 		// Set the association for the AuditableObject inheriting from superclass
 		if (Core.isSubClassOf(AudittrailSuperClass.getType(), auditableObject.getType())) {
-			logObject.setValue(sudoContext, Log.MemberNames.Log_AudittrailSuperClass.toString(),
+			logObject.setValue(LogrecordWriter.getContext(), Log.MemberNames.Log_AudittrailSuperClass.toString(),
 					auditableObject.getId());
 		} else {
 			// Retrieve the custom created association to AuditableObject, look it up when
@@ -144,7 +145,7 @@ public class CreateLogObject {
 								&& (ass.getType() == AssociationType.REFERENCESET
 										|| ass.getOwner() != AssociationOwner.BOTH)) {
 							association = ass.getName();
-							logObject.setValue(sudoContext, association, auditableObject.getId());
+							logObject.setValue(LogrecordWriter.getContext(), association, auditableObject.getId());
 
 							setAssociationName(auditableObject.getType(), association);
 							break;
@@ -179,15 +180,17 @@ public class CreateLogObject {
 
 		}
 
-		if ((createLogLines(auditableObject, logObject, sudoContext, context, logType, association) > 0)
+		if ((createLogLines(auditableObject, logObject, LogrecordWriter.getContext(), context, logType, association) > 0)
 				|| Constants.getCreateLogObjectWithoutMemberChanges() || logType == TypeOfLog.Delete) {
-			Core.commit(sudoContext, logObject);
+			// Core.commit(sudoContext, logObject);
+			Log log = Log.initialize(LogrecordWriter.getContext(), logObject);
+			LogrecordWriter.addLog(log);
 			return logObject;
 		} else {
 			logNode.debug(
 					"No log lines created (no attributes changed), and configurition prevents empty log records to be created. Removing this tmp Log object for: "
 							+ logObject.getValue(sudoContext, Log.MemberNames.ReferenceId.toString()));
-			Core.delete(sudoContext, logObject);
+			// Core.delete(sudoContext, logObject);
 			return null;
 		}
 	}
@@ -248,8 +251,10 @@ public class CreateLogObject {
 		}
 
 		if (logLineList.size() > 0) {
-			Core.commit(sudoContext, logObject);
-			Core.commit(sudoContext, logLineList);
+			Log log = Log.initialize(LogrecordWriter.getContext(), logObject);
+			LogrecordWriter.addLog(log);
+			/* Core.commit(sudoContext, logObject);
+			Core.commit(sudoContext, logLineList); */
 
 			return logLineList.size();
 		}
