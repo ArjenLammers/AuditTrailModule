@@ -180,7 +180,7 @@ public class CreateLogObject {
 
 		}
 
-		if ((createLogLines(auditableObject, logObject, LogrecordWriter.getContext(), context, logType, association) > 0)
+		if ((createLogLines(auditableObject, logObject, sudoContext, context, logType, association) > 0)
 				|| Constants.getCreateLogObjectWithoutMemberChanges() || logType == TypeOfLog.Delete) {
 			// Core.commit(sudoContext, logObject);
 			Log log = Log.initialize(LogrecordWriter.getContext(), logObject);
@@ -269,17 +269,17 @@ public class CreateLogObject {
 		
 		final boolean newOrChangedAttribute = isNew || !oldValue.equals(newValue);
 		if (newOrChangedAttribute || isDeleting || !Constants.getIncludeOnlyChangedAttributes()) {
-			final IMendixObject logLine = Core.instantiate(context, LogLine.getType());
+			final IMendixObject logLine = Core.instantiate(LogrecordWriter.getContext(), LogLine.getType());
 
-			logLine.setValue(context, LogLine.MemberNames.Member.toString(), member.getName());
-			logLine.setValue(context, LogLine.MemberNames.MemberType.toString(), memberType);
-			logLine.setValue(context, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId());
-			logLine.setValue(context, LogLine.MemberNames.NewValue.toString(), newValue);
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.Member.toString(), member.getName());
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.MemberType.toString(), memberType);
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.LogLine_Log.toString(), logObject.getId());
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.NewValue.toString(), newValue);
 
 			if (isNew)
-				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), "");
+				logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.OldValue.toString(), "");
 			else
-				logLine.setValue(context, LogLine.MemberNames.OldValue.toString(), oldValue);
+				logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.OldValue.toString(), oldValue);
 
 			if (newOrChangedAttribute)
 				incNumberOfChangedMembers(logObject, context, context, isNew, member.getName());
@@ -302,13 +302,13 @@ public class CreateLogObject {
 		final boolean newOrChangedObject = isNew || !Objects.equals(currentId, previousId);
 		if (newOrChangedObject || isDeleting || !Constants.getIncludeOnlyChangedAttributes()) {
 			final List<IMendixObject> logLineList = new ArrayList<IMendixObject>();
-			final IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
+			final IMendixObject logLine = Core.instantiate(LogrecordWriter.getContext(), LogLine.getType());
 
-			logLine.setValue(sudocontext, LogLine.MemberNames.Member.toString(), member.getName());
-			logLine.setValue(sudocontext, LogLine.MemberNames.MemberType.toString(), MemberType.Reference.toString());
-			logLine.setValue(sudocontext, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId());
-			logLine.setValue(sudocontext, LogLine.MemberNames.NewValue.toString(), "");
-			logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), "");
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.Member.toString(), member.getName());
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.MemberType.toString(), MemberType.Reference.toString());
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.LogLine_Log.toString(), logObject.getId());
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.NewValue.toString(), "");
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.OldValue.toString(), "");
 
 			logLineList.add(logLine);
 
@@ -327,7 +327,7 @@ public class CreateLogObject {
 			}
 
 			if (newOrChangedObject)
-				incNumberOfChangedMembers(logObject, sudocontext, sudocontext, isNew, member.getName());
+				incNumberOfChangedMembers(logObject, sudocontext, currentcontext, isNew, member.getName());
 
 			return logLineList;
 		}
@@ -381,8 +381,8 @@ public class CreateLogObject {
 
 	private static IMendixObject createMendixObject(final String objectType, final Map<String, Object> nameToValue, final IContext context) {
 		final IContext systemContext = context.createSudoClone();
-		final IMendixObject mendixObject = Core.instantiate(systemContext, objectType);
-		nameToValue.forEach((name, value) -> mendixObject.setValue(systemContext, name, value));
+		final IMendixObject mendixObject = Core.instantiate(LogrecordWriter.getContext(), objectType);
+		nameToValue.forEach((name, value) -> mendixObject.setValue(LogrecordWriter.getContext(), name, value));
 
 		return mendixObject;
 	}
@@ -409,13 +409,13 @@ public class CreateLogObject {
 			// The size below is just a good guess
 			final List<IMendixObject> logLineList = new ArrayList<IMendixObject>(currentIdList.size() + 1);
 
-			final IMendixObject logLine = Core.instantiate(sudocontext, LogLine.getType());
-			logLine.setValue(sudocontext, LogLine.MemberNames.Member.toString(), member.getName());
-			logLine.setValue(sudocontext, LogLine.MemberNames.MemberType.toString(),
+			final IMendixObject logLine = Core.instantiate(LogrecordWriter.getContext(), LogLine.getType());
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.Member.toString(), member.getName());
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.MemberType.toString(),
 					MemberType.ReferenceSet.toString());
-			logLine.setValue(sudocontext, LogLine.MemberNames.LogLine_Log.toString(), logObject.getId());
-			logLine.setValue(sudocontext, LogLine.MemberNames.NewValue.toString(), "");
-			logLine.setValue(sudocontext, LogLine.MemberNames.OldValue.toString(), "");
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.LogLine_Log.toString(), logObject.getId());
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.NewValue.toString(), "");
+			logLine.setValue(LogrecordWriter.getContext(), LogLine.MemberNames.OldValue.toString(), "");
 
 			logLineList.add(logLine);
 

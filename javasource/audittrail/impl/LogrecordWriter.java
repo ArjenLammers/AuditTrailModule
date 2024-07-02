@@ -13,6 +13,8 @@ import com.mendix.systemwideinterfaces.core.IMendixObject;
 
 import audittrail.proxies.Log;
 import audittrail.proxies.LogLine;
+import audittrail.proxies.ReferenceLog;
+import audittrail.proxies.ReferenceLogLine;
 import audittrail.proxies.constants.Constants;
 
 public class LogrecordWriter {
@@ -69,13 +71,23 @@ public class LogrecordWriter {
 							commitBuffer.add(l.getMendixObject());
 							List<IMendixObject> logLines = Core.retrieveByPath(context, l.getMendixObject(), LogLine.MemberNames.LogLine_Log.toString());
 							commitBuffer.addAll(logLines);
+							for (IMendixObject ll : logLines) {
+								List<IMendixObject> referenceLogs = Core.retrieveByPath(context, ll, ReferenceLog.MemberNames.ReferenceLog_LogLine.toString());
+								for (IMendixObject r : referenceLogs) {
+									List<IMendixObject> referenceLogLines = Core.retrieveByPath(context, r, ReferenceLogLine.MemberNames.ReferenceLogLine_ReferenceLog.toString());
+									commitBuffer.addAll(referenceLogLines);
+								}
+								commitBuffer.addAll(referenceLogs);
+							}
 						}
-					}
+						
+						context.startTransaction();
+						Core.commit(context, commitBuffer);
+						try { while (context.isInTransaction()) context.endTransaction(); } catch (Exception e) {} 
+						LOGGER.trace("Flushed " + commitBuffer.size() + " objects.");
+					} 
 					
-					context.startTransaction();
-					Core.commit(context, commitBuffer);
-					try { while (context.isInTransaction()) context.endTransaction(); } catch (Exception e) {} 
-					LOGGER.trace("Flushed...");
+					
 					Thread.yield();
 					try { sleep(100);} catch (Exception ex2) {}
 				} catch (Exception e) {
